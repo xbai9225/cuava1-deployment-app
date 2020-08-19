@@ -5,8 +5,8 @@ use serde_json::value::{
     Value,
     Value::{Bool as VBool, String as VString},
 };
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
 use kubos_app::{query, ServiceConfig};
 
