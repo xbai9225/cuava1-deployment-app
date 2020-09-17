@@ -1,10 +1,7 @@
 use failure::Error;
 use log::{info, warn};
 // use failure::{bail, Error};
-use serde_json::value::{
-    Value,
-    // Value::{Bool as VBool, String as VString},
-};
+use serde_json::value::{Value, Value::String as VString};
 use std::thread;
 use std::time::Duration;
 
