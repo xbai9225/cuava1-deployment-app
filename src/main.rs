@@ -3,7 +3,7 @@ use log::{info, warn};
 // use failure::{bail, Error};
 use serde_json::value::{
     Value,
-    Value::{Bool as VBool, String as VString},
+    // Value::{Bool as VBool, String as VString},
 };
 use std::thread;
 use std::time::Duration;
@@ -161,7 +161,7 @@ fn deploy_antenna(ant_service: &ServiceConfig) -> bool {
     let mutation_deploy_antenna = format!(
         r#"
         mutation {{
-            deploy(ant:ALL,force:true, time:10){{
+            deploy(ant:ALL,force:true, time:3){{
                 success,
                 errors
             }}
@@ -219,7 +219,7 @@ fn reset_antenna(ant_service: &ServiceConfig) -> bool {
 
 fn main() -> Result<(), Error> {
     // check if RBF is set
-    let rbf = check_rbf();
+    // let rbf = check_rbf();
 
     //retry the deployment for 5 times
     let num_retry = 5;
@@ -233,6 +233,18 @@ fn main() -> Result<(), Error> {
     // }
 
     // let mut deploy_status:bool;
+    let ant_service = ServiceConfig::new("isis-ants-service")?;
+    println!("Initiated the Antenna Service");
+
+    // check if the satellite is still stowed
+    let all_deployed = check_stowed(&ant_service);
+
+    if all_deployed {
+        // println!("Antenna already deployed");
+        return Ok(());
+    }
+
+    thread::sleep(Duration::from_secs(1800));
 
     let mut process_status;
     let mut arm_status;
@@ -240,8 +252,6 @@ fn main() -> Result<(), Error> {
     // let mut annt_deployed = 0;
 
     // deploy antenna, stopping if there are any failures along the way
-    let ant_service = ServiceConfig::new("isis-ants-service")?;
-    println!("Initiated the Antenna Service");
 
     // check deployment status is stowed.
     // stowed_status = check_stowed(&ant_service);
@@ -256,10 +266,9 @@ fn main() -> Result<(), Error> {
 
         println!("Trying the {} th time", i);
 
-        // check if the satellite is still stowed
-        let all_deployed = check_stowed(&ant_service);
+        let all_deployed1 = check_stowed(&ant_service);
 
-        if all_deployed {
+        if all_deployed1 {
             println!("Antenna already deployed");
             break;
         }
@@ -280,11 +289,11 @@ fn main() -> Result<(), Error> {
             warn!("Failed to deploy antenna");
         } else {
             // annt_deployed = 1;
-            info!("Antenna deployment successful");
-            println!("Antenna deployment successful");
+            info!("Thermal knife activated");
+            println!("Thermal Knife activated");
         }
 
-        thread::sleep(Duration::from_secs(300));
+        thread::sleep(Duration::from_secs(100));
 
         // reset antenna
         process_status = reset_antenna(&ant_service);
