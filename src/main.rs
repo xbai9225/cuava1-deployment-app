@@ -6,7 +6,9 @@ use std::time::Duration;
 
 use kubos_app::{query, ServiceConfig};
 
-static QUERY_TIMEOUT: u64 = 20;
+static QUERY_TIMEOUT: u64 = 30;
+static DEPLOYMENT_DELAY: u64 = 1800;
+static DEPLOY_INTERVAL: u64 = 60;
 
 // returns true if this program is run with RBF
 fn controller_selection() -> bool {
@@ -42,8 +44,8 @@ fn check_system_status(response: &Value, sys_status: &str) -> bool {
         .and_then(|v| v.get("status"))
         .and_then(|v| match v {
             VString(s) => {
-                println!("sys_status, {:?}", s);
-                info!("sys_status, {:?}", s);
+                println!("Deployment status:{:?}", s);
+                info!("Deployment status, {:?}", s);
                 Some(*s == sys_status)
             }
             _ => None,
@@ -229,15 +231,22 @@ fn main() -> Result<(), Error> {
         set_secondary_knife(&ant_service);
     }
 
-    thread::sleep(Duration::from_secs(120));
+    thread::sleep(Duration::from_secs(DEPLOYMENT_DELAY));
 
     for i in 0..num_retry {
         // check if the satellite is still stowed
         let all_deployed = check_stowed(&ant_service);
-        
+
         if all_deployed {
-            info!("Antenna already deployed");
+            info!("Antenna succefully deployed");
             break;
+        }
+
+        // reset antenna
+        process_status = reset_antenna(&ant_service);
+        println!("Reseting antenna deployment sequence");
+        if !process_status {
+            warn!("Failed to reset antenna");
         }
 
         if  i > 2 {
@@ -250,6 +259,7 @@ fn main() -> Result<(), Error> {
         
         info!("Starting deployment sequence");
         info!("Trying the {} th time", i+1);
+        println!("Trying the {} th time", i+1);
 
         // arm the antenna
         arm_status = arm_antenna(&ant_service);
@@ -267,17 +277,11 @@ fn main() -> Result<(), Error> {
             info!("Thermal knife activated");
         }
 
-        thread::sleep(Duration::from_secs(60));
-
-        // reset antenna
-        process_status = reset_antenna(&ant_service);
-        if !process_status {
-            warn!("Failed to reset antenna");
-        }
+        thread::sleep(Duration::from_secs(DEPLOY_INTERVAL));
     }
 
-    info!("All antenna successfully deployed");
-    println!("All antenna successfully deployed");
+    info!("Finished deployment sequence");
+    println!("Finished deployment sequence");
 
     Ok(())
 }
